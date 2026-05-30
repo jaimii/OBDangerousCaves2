@@ -1,76 +1,96 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>me.imdanix</groupId>
-    <artifactId>DangerousCaves</artifactId>
-    <version>2.3.0</version>
+    <groupId>me.imdanix.plugins</groupId>
+    <artifactId>dangerous-caves</artifactId>
+    <version>2.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+
     <name>DangerousCaves</name>
-    <description>Make your caves scary</description>
+    <description>Minecraft Paper plugin for a new cave experience.</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+
+        <repository>
+            <id>glowing-ink</id>
+            <url>https://repo.glowing.ink/releases</url>
+        </repository>
+
+        <repository>
+            <id>placeholderapi</id>
+            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+        </repository>
+
+        <repository>
+            <id>jitpack-repo</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.21.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.0.2</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>ink.glowing</groupId>
+            <artifactId>ezmath</artifactId>
+            <version>3.21</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>me.clip</groupId>
+            <artifactId>placeholderapi</artifactId>
+            <version>2.11.6</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 
     <build>
+        <defaultGoal>clean package</defaultGoal>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
-            <resource>
-                <filtering>true</filtering>
-                <directory>..</directory>
-                <includes>
-                    <include>LICENSE</include>
-                </includes>
-            </resource>
         </resources>
-        <finalName>DangerousCaves-${project.version}</finalName>
         <plugins>
-           <plugin>
-               <groupId>org.apache.maven.plugins</groupId>
-               <artifactId>maven-compiler-plugin</artifactId>
-               <version>3.13.0</version>
-               <configuration>
-                    <source>21</source>
-                    <target>21</target>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.6.0</version>
-                <configuration>
-                    <minimizeJar>true</minimizeJar>
-                    <relocations>
-                        <relocation>
-                            <pattern>org.bstats</pattern>
-                            <shadedPattern>me.imdanix.caves.metrics</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>io.papermc.lib</pattern>
-                            <shadedPattern>me.imdanix.caves.paperlib</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>me.imdanix.math</pattern>
-                            <shadedPattern>me.imdanix.caves.utils.math</shadedPattern>
-                        </relocation>
-                    </relocations>
-                    <transformers>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <manifestEntries>
-                                <Specification-Title>DangerousCaves - Make your caves scary</Specification-Title>
-                                <Implementation-Title>me.imdanix.caves</Implementation-Title>
-                                <Implementation-Version>${project.version}</Implementation-Version>
-                            </manifestEntries>
-                        </transformer>
-                    </transformers>
-                    <filters>
-                        <filter>
-                            <artifact>*:*</artifact>
-                            <excludes>
-                                <exclude>META-INF/**</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -79,71 +99,20 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>ink.glowing.ezmath</pattern>
+                                    <shadedPattern>me.imdanix.caves.libs.ezmath</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.bstats</pattern>
+                                    <shadedPattern>me.imdanix.caves.libs.bstats</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>papermc</id>
-            <url>https://papermc.io/repo/repository/maven-public/</url>
-        </repository>
-        <repository>
-            <id>sk89q-repo</id>
-            <url>https://maven.enginehub.org/repo/</url>
-        </repository>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-        <repository>
-            <id>CodeMC</id>
-            <url>https://repo.codemc.org/repository/maven-public</url>
-        </repository>
-        <repository>
-            <id>placeholderapi</id>
-            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-        </repository>
-        <repository>
-            <id>glowing-ink-releases</id>
-            <url>http://repo.glowing.ink/releases</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.21.3-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.papermc</groupId>
-            <artifactId>paperlib</artifactId>
-            <version>1.0.8</version>
-            <scope>compile</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.bstats</groupId>
-            <artifactId>bstats-bukkit</artifactId>
-            <version>3.0.3</version>
-            <scope>compile</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>ink.glowing</groupId>
-            <artifactId>ezmath</artifactId>
-            <version>3.21</version>
-        </dependency>
-        <dependency>
-            <groupId>me.clip</groupId>
-            <artifactId>placeholderapi</artifactId>
-            <version>2.11.6</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
 </project>

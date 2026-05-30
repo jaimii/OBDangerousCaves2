@@ -1,6 +1,5 @@
 package me.imdanix.caves.caverns;
 
-import io.papermc.lib.PaperLib;
 import me.imdanix.caves.configuration.Configurable;
 import me.imdanix.caves.ticks.TickLevel;
 import me.imdanix.caves.ticks.Tickable;
@@ -139,7 +138,8 @@ public class CavesAging implements Tickable, Configurable {
                     Chunk chunk = queuedChunk.getChunk(world);
                     if (chunk == null || !chunk.isLoaded()) {
                         if (forceLoad) {
-                            PaperLib.getChunkAtAsync(world, queuedChunk.x, queuedChunk.z).thenAccept(
+                            // Using Paper's native getChunkAtAsync method
+                            world.getChunkAtAsync(queuedChunk.x, queuedChunk.z).thenAccept(
                                     this::proceedChunk
                             );
                         }
@@ -191,8 +191,8 @@ public class CavesAging implements Tickable, Configurable {
 
             if (lightLevel >= 0 && (
                     snapshot.getBlockEmittedLight(x, y, z) >= lightLevel ||
-                    snapshot.getBlockEmittedLight(x, y+1, z) >= lightLevel ||
-                    snapshot.getBlockEmittedLight(x, y-1, z) >= lightLevel
+                            snapshot.getBlockEmittedLight(x, y+1, z) >= lightLevel ||
+                            snapshot.getBlockEmittedLight(x, y-1, z) >= lightLevel
             )) continue;
 
             if (type == Material.TORCH) {
@@ -256,7 +256,7 @@ public class CavesAging implements Tickable, Configurable {
             this.z = z;
             this.changeType = changeType;
         }
-    
+
         public void perform(Chunk chunk) {
             Block block = chunk.getBlock(x, y, z);
             Material type = block.getType();
@@ -307,7 +307,7 @@ public class CavesAging implements Tickable, Configurable {
             }
         }
     }
-    
+
     private enum ChangeType {
         VINE, RED_MUSHROOM, BROWN_MUSHROOM, ROCK, STALAGMITE, COBBLESTONE, ANDESITE, TORCH_AIR
     }

@@ -18,6 +18,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import static org.bukkit.attribute.Attribute.*;
+
 public final class Utils {
     private final static Pattern FLOAT = Pattern.compile("-?\\d+(\\.\\d+)?");
 
@@ -41,7 +43,16 @@ public final class Utils {
     }
 
     public static void setMaxHealth(LivingEntity entity, double health) {
-        entity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(health);
+        org.bukkit.attribute.Attribute maxHealthAttribute;
+        try {
+            // Try the 1.21.4+ name first
+            maxHealthAttribute = org.bukkit.attribute.Attribute.valueOf("MAX_HEALTH");
+        } catch (IllegalArgumentException e) {
+            // Fall back to the 1.21.1 and older name
+            maxHealthAttribute = org.bukkit.attribute.Attribute.valueOf("GENERIC_MAX_HEALTH");
+        }
+
+        entity.getAttribute(maxHealthAttribute).setBaseValue(health);
         entity.setHealth(health);
     }
 

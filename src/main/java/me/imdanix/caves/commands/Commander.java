@@ -17,7 +17,6 @@ import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -34,7 +33,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 
-// TODO: Refactor, split to different classes
 public class Commander implements CommandExecutor, TabCompleter {
     private static final List<String> ARGS = Arrays.asList("info", "summon", "spawn", "kill", "tick", "reload", "r", "mimeremove");
     private static final Set<String> WITH_MOBS = new HashSet<>(Arrays.asList("summon", "spawn", "kill"));
@@ -57,8 +55,6 @@ public class Commander implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             help(sender, label);
         } else switch (args[0].toLowerCase(Locale.ROOT)) {
-            // TODO: "debug"
-
             case "summon", "spawn" -> {
                 if (!sender.hasPermission("dangerouscaves.command.summon")) return false;
                 if (args.length < 2) {
@@ -96,37 +92,61 @@ public class Commander implements CommandExecutor, TabCompleter {
                 }
             }
 
-            // TODO v Temporary command - need to finish mimics...
-            case "mimeremove" -> { // /dcaves mimeremove 3 me
+            case "mimeremove" -> {
                 if (!sender.hasPermission("dangerouscaves.command.kill")) return false;
-                boolean checkAll = args.length < 3 || !args[2].equalsIgnoreCase("all") || sender instanceof ConsoleCommandSender;
-                int radius = args.length < 2 ? 1 : (int) Utils.getDouble(args[1], 1);
 
-                Collection<? extends Player> players = checkAll ? Bukkit.getOnlinePlayers() : Collections.singleton((Player) sender);
-                Set<Integer> checked = new HashSet<>(); // Better to use fastutils, but unavailable in Spigot
                 List<BlockState> toRemove = new ArrayList<>();
-                for (Player player : players) {
-                    World world = player.getWorld();
-                    final int centerX = (int) player.getLocation().getX() / 16;
-                    final int centerZ = (int) player.getLocation().getZ() / 16;
-                    for (int chunkX = centerX - radius; chunkX <= centerX + radius; ++chunkX) for (int chunkZ = centerZ - radius; chunkZ <= centerZ + radius; ++chunkZ) {
-                        int hash = chunkZ * (chunkX >> 16) * world.getUID().hashCode();
-                        if (!world.isChunkLoaded(chunkX, chunkZ) || checked.contains(hash)) continue;
-                        Chunk chunk = world.getChunkAt(chunkX, chunkZ);
-                        for (int x = 0; x < 16; ++x) for (int z = 0; z < 16; ++z) {
+
+                // If no arguments or "all" is specified, scan all loaded chunks on the server
+                if (args.length < 2 || args[1].equalsIgnoreCase("all")) {
+                    for (World world : Bukkit.getWorlds()) {
+                        for (Chunk chunk : world.getLoadedChunks()) {
                             for (BlockState state : chunk.getTileEntities()) {
                                 if (state.getType() != Material.CHEST) continue;
                                 String tag = TagHelper.getTag(state);
-                                if (tag != null && tag.startsWith("mimic")) toRemove.add(state);
+                                if (tag != null && tag.startsWith("mimic")) {
+                                    toRemove.add(state);
+                                }
                             }
                         }
-                        checked.add(hash);
+                    }
+                } else {
+                    // Otherwise, remove mimic chests within a radius of chunks around players
+                    int radius = (int) Utils.getDouble(args[1], 1);
+                    boolean checkAllPlayers = args.length < 3 || args[2].equalsIgnoreCase("all") || !(sender instanceof Player);
+                    Collection<? extends Player> players = checkAllPlayers ? Bukkit.getOnlinePlayers() : Collections.singleton((Player) sender);
+
+                    Set<Chunk> checked = new HashSet<>();
+                    for (Player player : players) {
+                        World world = player.getWorld();
+                        int centerX = player.getLocation().getBlockX() >> 4;
+                        int centerZ = player.getLocation().getBlockZ() >> 4;
+
+                        for (int chunkX = centerX - radius; chunkX <= centerX + radius; ++chunkX) {
+                            for (int chunkZ = centerZ - radius; chunkZ <= centerZ + radius; ++chunkZ) {
+                                if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
+                                Chunk chunk = world.getChunkAt(chunkX, chunkZ);
+
+                                // Returns false if the chunk has already been evaluated
+                                if (!checked.add(chunk)) continue;
+
+                                for (BlockState state : chunk.getTileEntities()) {
+                                    if (state.getType() != Material.CHEST) continue;
+                                    String tag = TagHelper.getTag(state);
+                                    if (tag != null && tag.startsWith("mimic")) {
+                                        toRemove.add(state);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+
                 sender.sendMessage(Utils.clr("&eRemoving " + toRemove.size() + " mimic chests..."));
-                for (BlockState block : toRemove) block.getBlock().setType(Material.AIR, false);
+                for (BlockState block : toRemove) {
+                    block.getBlock().setType(Material.AIR, false);
+                }
             }
-            // TODO ^
 
             case "tick" -> {
                 if (!sender.hasPermission("dangerouscaves.command.tick")) return false;
@@ -151,11 +171,11 @@ public class Commander implements CommandExecutor, TabCompleter {
             return StringUtil.copyPartialMatches(args[0], ARGS, new ArrayList<>());
         }
         return args.length == 2 && WITH_MOBS.contains(args[0].toLowerCase(Locale.ROOT)) ?
-               StringUtil.copyPartialMatches(args[1], mobsManager.getMobs(), new ArrayList<>()) : null;
+                StringUtil.copyPartialMatches(args[1], mobsManager.getMobs(), new ArrayList<>()) : null;
     }
 
     private static Location getLocation(CommandSender sender, String[] args) {
-        if (args.length == 0) {                                                 // empty
+        if (args.length == 0) {
             if (sender instanceof Entity entitySender) {
                 return entitySender.getLocation();
             } else if (sender instanceof BlockCommandSender blockSender) {
@@ -166,7 +186,7 @@ public class Commander implements CommandExecutor, TabCompleter {
         }
 
         World world;
-        if (args.length == 3 || args.length == 5) {                             // x y z OR x y z yaw pitch
+        if (args.length == 3 || args.length == 5) {
             if (sender instanceof Entity entitySender) {
                 world = entitySender.getWorld();
             } else if (sender instanceof BlockCommandSender blockSender) {
@@ -174,14 +194,13 @@ public class Commander implements CommandExecutor, TabCompleter {
             } else {
                 world = Bukkit.getWorlds().get(0);
             }
-        } else if (args.length == 4 || args.length == 6) {                      // x y z world OR x y z yaw pitch world
+        } else if (args.length == 4 || args.length == 6) {
             world = Bukkit.getWorld(args.length == 4 ? args[3] : args[5]);
             if (world == null) return null;
-        } else {                                                                // what
+        } else {
             return null;
         }
 
-        // TODO Check if double
         if (args.length < 5) {
             return new Location(
                     world,
@@ -214,5 +233,6 @@ public class Commander implements CommandExecutor, TabCompleter {
         sender.sendMessage(Utils.clr("&a /" + label + " kill [mob] &7- Kill all DC mobs (of type &emob&7 if specified)."));
         sender.sendMessage(Utils.clr("&a /" + label + " tick &7- Tick everything manually."));
         sender.sendMessage(Utils.clr("&a /" + label + " reload &7- Reload plugin configuration."));
+        sender.sendMessage(Utils.clr("&a /" + label + " mimeremove [radius/all] [me/all] &7- Clear loaded Mimic chests."));
     }
 }
